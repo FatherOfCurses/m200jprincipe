@@ -1,5 +1,6 @@
 package mflix.api.services;
 
+import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import mflix.api.models.UserPrincipal;
@@ -38,11 +39,12 @@ public class TokenAuthenticationService {
   }
 
   public String mintJWTHeader(String username) {
+    JwtBuilder builder = Jwts.builder();
+    builder.setSubject(username);
+    builder.setExpiration(new Date(System.currentTimeMillis() + jwtExpirationInMs));
+    builder.signWith(SignatureAlgorithm.HS512, jwtSecret);
     String JWT =
-        Jwts.builder()
-            .setSubject(username)
-            .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationInMs))
-            .signWith(SignatureAlgorithm.HS512, jwtSecret)
+        builder
             .compact();
     return TOKEN_PREFIX + " " + JWT;
   }
