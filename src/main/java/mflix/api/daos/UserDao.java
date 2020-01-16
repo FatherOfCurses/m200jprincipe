@@ -4,6 +4,7 @@ import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.UpdateOptions;
+import com.mongodb.client.model.Updates;
 import com.mongodb.client.result.UpdateResult;
 import mflix.api.models.Session;
 import mflix.api.models.User;
@@ -17,13 +18,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+import static com.mongodb.client.model.Aggregates.addFields;
 import static com.mongodb.client.model.Aggregates.match;
 import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Updates.set;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
 
@@ -105,13 +105,15 @@ public class UserDao extends AbstractMFlixDao {
         List<Bson> userIdFilter = Arrays.asList(match(eq("email", email)));
         Document userDocument = usersCollection.aggregate(userIdFilter).first();
         //TODO> Ticket: User Management - implement the query that returns the first User object.
-      if(!(userDocument == null)) {
-        User user = new User();
-        user.setName(userDocument.get("name").toString());
-        user.setEmail(userDocument.get("email").toString());
-        user.setHashedpw(userDocument.get("password").toString());
-        return user;
-      } else return null;
+        if (!(userDocument == null)) {
+            User user = new User();
+            user.setName(userDocument.get("name").toString());
+            user.setEmail(userDocument.get("email").toString());
+            user.setHashedpw(userDocument.get("password").toString());
+            Map<String, String> preferences = user.getPreferences();
+            user.setPreferences(preferences);
+            return user;
+        } else return null;
     }
 
     /**
@@ -168,7 +170,18 @@ public class UserDao extends AbstractMFlixDao {
         //TODO> Ticket: User Preferences - implement the method that allows for user preferences to
         // be updated.
         //TODO > Ticket: Handling Errors - make this method more robust by
-        // handling potential exceptions when updating an entry.
-        return false;
+        // handling potential exceptions when updating
+        List<Document> userPreferenceDetails = new ArrayList<>();
+        for(Map.Entry<String, ?> eachUserPreference: userPreferences.entrySet()) {
+            Document singleUserPreference = new Document();
+            singleUserPreference.put(eachUserPreference.getKey(), eachUserPreference.getValue());
+            userPreferenceDetails.add(singleUserPreference);
+        }
+        Bson queryFilter = new Document("email", email);
+        if (!(usersCollection.find(queryFilter) == null)) {
+            usersCollection.updateOne(queryFilter, set("preferences", userPreferenceDetails), options);
+            return true;
+        }
+        throw new IncorrectDaoOperation("No user");
     }
 }

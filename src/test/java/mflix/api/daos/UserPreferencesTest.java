@@ -39,6 +39,7 @@ public class UserPreferencesTest extends TicketTest {
     this.email = "user@preferences.email";
     Document userDoc = new Document("email", email);
     userDoc.put("name", "Preferencial");
+    userDoc.put("password", "somehashedpassword");
     mongoClient.getDatabase(databaseName).getCollection("users").insertOne(userDoc);
   }
 
